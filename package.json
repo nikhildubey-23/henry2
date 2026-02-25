@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "build": "npx tailwindcss -i ./static/input.css -o ./static/style.css",
+    "build:prod": "npx tailwindcss -i ./static/input.css -o ./static/style.css --minify",
+    "watch": "npx tailwindcss -i ./static/input.css -o ./static/style.css --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
