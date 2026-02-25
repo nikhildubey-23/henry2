@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Henri - Beauty & Skincare{% endblock %}
+
+{% block content %}
+<div class="bg-gradient-to-r from-amber-50 to-orange-50 py-12">
+    <div class="container mx-auto px-4">
+        <h1 class="text-4xl font-bold text-gray-800 mb-4">Discover Your Beauty</h1>
+        <p class="text-gray-600 text-lg">Premium skincare and beauty products at your fingertips</p>
+    </div>
+</div>
+
+<div class="container mx-auto px-4 py-8">
+    <div class="flex flex-col lg:flex-row gap-8">
+        <aside class="lg:w-1/4">
+            <div class="bg-white rounded-lg shadow-md p-6 sticky top-24">
+                <h2 class="text-lg font-semibold mb-4">Categories</h2>
+                <div class="space-y-2">
+                    <a href="{{ url_for('index') }}" class="block px-4 py-2 rounded-lg {% if not current_category %}bg-primary text-white{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+                        All Products
+                    </a>
+                    {% set unique_categories = products|map(attribute='category')|unique|list %}
+                    {% for cat in unique_categories %}
+                    <a href="{{ url_for('category', category=cat) }}" class="block px-4 py-2 rounded-lg {% if current_category == cat %}bg-primary text-white{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+                        {{ cat }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </aside>
+        
+        <div class="lg:w-3/4">
+            {% if search_query %}
+            <div class="mb-6">
+                <h2 class="text-2xl font-semibold">Search Results for "{{ search_query }}"</h2>
+                <p class="text-gray-600">{{ products|length }} products found</p>
+            </div>
+            {% elif current_category %}
+            <div class="mb-6">
+                <h2 class="text-2xl font-semibold">{{ current_category }}</h2>
+                <p class="text-gray-600">{{ products|length }} products</p>
+            </div>
+            {% endif %}
+            
+            {% if products %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for product in products %}
+                <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow">
+                    <div class="h-48 bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
+                        <i class="fas fa-spa text-6xl text-primary"></i>
+                    </div>
+                    <div class="p-4">
+                        <span class="text-xs text-gray-500 uppercase tracking-wide">{{ product.category }}</span>
+                        <h3 class="text-lg font-semibold mt-1">{{ product.name }}</h3>
+                        <div class="flex items-center justify-between mt-3">
+                            <span class="text-xl font-bold text-primary">₹{{ "%.2f"|format(product.sale_price) }}</span>
+                            {% if product.current_stock > 0 %}
+                            <span class="text-xs text-green-600"><i class="fas fa-check-circle"></i> In Stock</span>
+                            {% else %}
+                            <span class="text-xs text-red-500"><i class="fas fa-times-circle"></i> Out of Stock</span>
+                            {% endif %}
+                        </div>
+                        {% if product.current_stock > 0 %}
+                        <a href="{{ url_for('product_detail', product_id=product.id) }}" class="block w-full bg-primary text-white text-center py-2 mt-3 rounded-lg hover:bg-secondary transition">
+                            View Details
+                        </a>
+                        {% else %}
+                        <button disabled class="block w-full bg-gray-300 text-gray-500 text-center py-2 mt-3 rounded-lg cursor-not-allowed">
+                            Out of Stock
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <i class="fas fa-search text-6xl text-gray-300 mb-4"></i>
+                <p class="text-gray-500 text-lg">No products found</p>
+                <a href="{{ url_for('index') }}" class="inline-block mt-4 text-primary hover:underline">Browse all products</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

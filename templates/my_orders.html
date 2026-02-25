@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}My Orders - Henri{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-8">My Orders</h1>
+    
+    {% if orders %}
+    <div class="space-y-4">
+        {% for order in orders %}
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="p-4 bg-gray-50 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <span class="font-semibold">{{ order.order_number }}</span>
+                    <span class="text-gray-500 ml-2">{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+                <span class="px-3 py-1 rounded-full text-sm font-medium 
+                    {% if order.status == 'pending' %}bg-yellow-100 text-yellow-800
+                    {% elif order.status == 'processing' %}bg-blue-100 text-blue-800
+                    {% elif order.status == 'shipped' %}bg-purple-100 text-purple-800
+                    {% elif order.status == 'delivered' %}bg-green-100 text-green-800
+                    {% else %}bg-red-100 text-red-800{% endif %}">
+                    {{ order.status|title }}
+                </span>
+            </div>
+            <div class="p-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h3 class="font-semibold mb-2">Items</h3>
+                        <div class="space-y-1">
+                            {% for item in order.items %}
+                            <div class="flex justify-between text-sm">
+                                <span>{{ item.product_name }} x {{ item.quantity }}</span>
+                                <span>₹{{ "%.2f"|format(item.total) }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold mb-2">Shipping Address</h3>
+                        <p class="text-sm text-gray-600">{{ order.shipping_address }}</p>
+                        <p class="text-sm text-gray-500 mt-2">{{ order.customer_phone }}</p>
+                    </div>
+                </div>
+                <div class="border-t mt-4 pt-4 flex justify-between items-center">
+                    <div class="text-lg font-bold">Total: ₹{{ "%.2f"|format(order.total) }}</div>
+                    <a href="{{ url_for('admin_order_detail', order_id=order.id) }}" class="text-primary hover:underline">
+                        View Details
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-16">
+        <i class="fas fa-box-open text-6xl text-gray-300 mb-4"></i>
+        <h2 class="text-2xl font-semibold text-gray-600 mb-2">No orders yet</h2>
+        <p class="text-gray-500 mb-6">Start shopping to see your orders here.</p>
+        <a href="{{ url_for('index') }}" class="inline-block bg-primary text-white px-6 py-3 rounded-lg hover:bg-secondary transition">
+            Start Shopping
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

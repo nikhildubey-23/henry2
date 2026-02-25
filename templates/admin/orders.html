@@ -1,0 +1,65 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Orders - Henri Admin{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">Orders</h1>
+    <div class="flex gap-2">
+        <a href="{{ url_for('admin_orders', status='all') }}" class="px-4 py-2 rounded-lg {% if current_status == 'all' %}bg-primary text-white{% else %}bg-gray-200{% endif %}">All</a>
+        <a href="{{ url_for('admin_orders', status='pending') }}" class="px-4 py-2 rounded-lg {% if current_status == 'pending' %}bg-primary text-white{% else %}bg-gray-200{% endif %}">Pending</a>
+        <a href="{{ url_for('admin_orders', status='processing') }}" class="px-4 py-2 rounded-lg {% if current_status == 'processing' %}bg-primary text-white{% else %}bg-gray-200{% endif %}">Processing</a>
+        <a href="{{ url_for('admin_orders', status='shipped') }}" class="px-4 py-2 rounded-lg {% if current_status == 'shipped' %}bg-primary text-white{% else %}bg-gray-200{% endif %}">Shipped</a>
+        <a href="{{ url_for('admin_orders', status='delivered') }}" class="px-4 py-2 rounded-lg {% if current_status == 'delivered' %}bg-primary text-white{% else %}bg-gray-200{% endif %}">Delivered</a>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="w-full">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="text-left py-3 px-4">Order #</th>
+                <th class="text-left py-3 px-4">Customer</th>
+                <th class="text-left py-3 px-4">Phone</th>
+                <th class="text-left py-3 px-4">Total</th>
+                <th class="text-left py-3 px-4">Status</th>
+                <th class="text-left py-3 px-4">Date</th>
+                <th class="text-left py-3 px-4">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr class="border-b hover:bg-gray-50">
+                <td class="py-3 px-4 font-medium">{{ order.order_number }}</td>
+                <td class="py-3 px-4">
+                    <div>{{ order.customer_name }}</div>
+                    <div class="text-xs text-gray-500">{{ order.customer_email }}</div>
+                </td>
+                <td class="py-3 px-4">{{ order.customer_phone }}</td>
+                <td class="py-3 px-4">₹{{ "%.2f"|format(order.total) }}</td>
+                <td class="py-3 px-4">
+                    <span class="px-2 py-1 rounded-full text-xs font-medium 
+                        {% if order.status == 'pending' %}bg-yellow-100 text-yellow-800
+                        {% elif order.status == 'processing' %}bg-blue-100 text-blue-800
+                        {% elif order.status == 'shipped' %}bg-purple-100 text-purple-800
+                        {% elif order.status == 'delivered' %}bg-green-100 text-green-800
+                        {% else %}bg-red-100 text-red-800{% endif %}">
+                        {{ order.status|title }}
+                    </span>
+                </td>
+                <td class="py-3 px-4 text-sm text-gray-500">{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td class="py-3 px-4">
+                    <a href="{{ url_for('admin_order_detail', order_id=order.id) }}" class="text-primary hover:underline">
+                        <i class="fas fa-eye"></i> View
+                    </a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="py-8 text-center text-gray-500">No orders found</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

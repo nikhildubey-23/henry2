@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.category-btn.active {
+    background-color: #d4a574;
+    color: white;
+}

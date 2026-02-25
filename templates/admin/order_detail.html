@@ -1,0 +1,107 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Order {{ order.order_number }} - Henri Admin{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">Order {{ order.order_number }}</h1>
+    <a href="{{ url_for('admin_orders') }}" class="text-primary hover:underline">
+        <i class="fas fa-arrow-left"></i> Back to Orders
+    </a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold mb-4">Order Information</h2>
+        <div class="space-y-3">
+            <div class="flex justify-between">
+                <span class="text-gray-500">Order Number</span>
+                <span class="font-medium">{{ order.order_number }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-gray-500">Status</span>
+                <span class="px-2 py-1 rounded-full text-xs font-medium 
+                    {% if order.status == 'pending' %}bg-yellow-100 text-yellow-800
+                    {% elif order.status == 'processing' %}bg-blue-100 text-blue-800
+                    {% elif order.status == 'shipped' %}bg-purple-100 text-purple-800
+                    {% elif order.status == 'delivered' %}bg-green-100 text-green-800
+                    {% else %}bg-red-100 text-red-800{% endif %}">
+                    {{ order.status|title }}
+                </span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-gray-500">Date</span>
+                <span>{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-gray-500">Payment Method</span>
+                <span>{{ 'Cash on Delivery' if order.payment_method == 'cod' else 'Online Payment' }}</span>
+            </div>
+        </div>
+        
+        <h2 class="text-lg font-semibold mt-6 mb-4">Customer Information</h2>
+        <div class="space-y-3">
+            <div>
+                <span class="text-gray-500 block text-sm">Name</span>
+                <span class="font-medium">{{ order.customer_name }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500 block text-sm">Email</span>
+                <span>{{ order.customer_email }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500 block text-sm">Phone</span>
+                <span>{{ order.customer_phone }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500 block text-sm">Shipping Address</span>
+                <span>{{ order.shipping_address }}</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="space-y-6">
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold mb-4">Order Items</h2>
+            <div class="space-y-3">
+                {% for item in order.items %}
+                <div class="flex justify-between items-center border-b pb-3">
+                    <div>
+                        <span class="font-medium">{{ item.product_name }}</span>
+                        <span class="text-gray-500 text-sm ml-2">x{{ item.quantity }}</span>
+                    </div>
+                    <span>₹{{ "%.2f"|format(item.total) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="flex justify-between items-center mt-4 pt-4 border-t">
+                <span class="font-semibold">Total</span>
+                <span class="text-xl font-bold text-primary">₹{{ "%.2f"|format(order.total) }}</span>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold mb-4">Update Order Status</h2>
+            <form method="POST" action="{{ url_for('admin_update_order', order_id=order.id) }}">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select name="status" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-primary">
+                        <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="processing" {% if order.status == 'processing' %}selected{% endif %}>Processing</option>
+                        <option value="shipped" {% if order.status == 'shipped' %}selected{% endif %}>Shipped</option>
+                        <option value="delivered" {% if order.status == 'delivered' %}selected{% endif %}>Delivered</option>
+                        <option value="cancelled" {% if order.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea name="notes" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-primary">{{ order.notes }}</textarea>
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg hover:bg-secondary transition">
+                    Update Order
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

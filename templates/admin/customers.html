@@ -1,0 +1,41 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Customers - Henri Admin{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Customers</h1>
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <table class="w-full">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="text-left py-3 px-4">Name</th>
+                <th class="text-left py-3 px-4">Email</th>
+                <th class="text-left py-3 px-4">Phone</th>
+                <th class="text-left py-3 px-4">Orders</th>
+                <th class="text-left py-3 px-4">Joined</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for customer in customers %}
+            <tr class="border-b hover:bg-gray-50">
+                <td class="py-3 px-4 font-medium">{{ customer.name }}</td>
+                <td class="py-3 px-4">{{ customer.email }}</td>
+                <td class="py-3 px-4">{{ customer.phone or '-' }}</td>
+                <td class="py-3 px-4">
+                    {% set order_count = customer.id %}
+                    <a href="{{ url_for('admin_orders') }}?customer={{ customer.id }}" class="text-primary hover:underline">
+                        View Orders
+                    </a>
+                </td>
+                <td class="py-3 px-4 text-sm text-gray-500">{{ customer.created_at.strftime('%Y-%m-%d') }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="py-8 text-center text-gray-500">No customers found</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

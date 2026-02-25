@@ -1,0 +1,40 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Statistics - Henri Admin{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Statistics</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-gray-500 text-sm mb-2">Total Revenue</h3>
+        <p class="text-3xl font-bold text-green-600">₹{{ "%.2f"|format(total_revenue) }}</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow p-6">
+    <h2 class="text-xl font-semibold mb-4">Orders by Status</h2>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div class="text-center p-4 bg-yellow-50 rounded-lg">
+            <p class="text-2xl font-bold text-yellow-600">{{ orders_by_status.pending }}</p>
+            <p class="text-sm text-gray-600">Pending</p>
+        </div>
+        <div class="text-center p-4 bg-blue-50 rounded-lg">
+            <p class="text-2xl font-bold text-blue-600">{{ orders_by_status.processing }}</p>
+            <p class="text-sm text-gray-600">Processing</p>
+        </div>
+        <div class="text-center p-4 bg-purple-50 rounded-lg">
+            <p class="text-2xl font-bold text-purple-600">{{ orders_by_status.shipped }}</p>
+            <p class="text-sm text-gray-600">Shipped</p>
+        </div>
+        <div class="text-center p-4 bg-green-50 rounded-lg">
+            <p class="text-2xl font-bold text-green-600">{{ orders_by_status.delivered }}</p>
+            <p class="text-sm text-gray-600">Delivered</p>
+        </div>
+        <div class="text-center p-4 bg-red-50 rounded-lg">
+            <p class="text-2xl font-bold text-red-600">{{ orders_by_status.cancelled }}</p>
+            <p class="text-sm text-gray-600">Cancelled</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

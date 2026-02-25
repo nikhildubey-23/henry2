@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin - Henri{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="flex">
+        <aside class="w-64 bg-gray-800 text-white min-h-screen fixed">
+            <div class="p-6">
+                <h1 class="text-xl font-bold">Henri Admin</h1>
+            </div>
+            <nav class="mt-4">
+                <a href="{{ url_for('admin_dashboard') }}" class="block px-6 py-3 hover:bg-gray-700 {% if request.endpoint == 'admin_dashboard' %}bg-gray-700{% endif %}">
+                    <i class="fas fa-home w-6"></i> Dashboard
+                </a>
+                <a href="{{ url_for('admin_orders') }}" class="block px-6 py-3 hover:bg-gray-700 {% if 'order' in request.endpoint %}bg-gray-700{% endif %}">
+                    <i class="fas fa-shopping-cart w-6"></i> Orders
+                </a>
+                <a href="{{ url_for('admin_products') }}" class="block px-6 py-3 hover:bg-gray-700 {% if 'product' in request.endpoint %}bg-gray-700{% endif %}">
+                    <i class="fas fa-box w-6"></i> Products
+                </a>
+                <a href="{{ url_for('admin_ratings') }}" class="block px-6 py-3 hover:bg-gray-700 {% if 'rating' in request.endpoint %}bg-gray-700{% endif %}">
+                    <i class="fas fa-star w-6"></i> Ratings
+                </a>
+                <a href="{{ url_for('admin_customers') }}" class="block px-6 py-3 hover:bg-gray-700 {% if request.endpoint == 'admin_customers' %}bg-gray-700{% endif %}">
+                    <i class="fas fa-users w-6"></i> Customers
+                </a>
+                <a href="{{ url_for('admin_stats') }}" class="block px-6 py-3 hover:bg-gray-700 {% if request.endpoint == 'admin_stats' %}bg-gray-700{% endif %}">
+                    <i class="fas fa-chart-bar w-6"></i> Statistics
+                </a>
+                <a href="{{ url_for('index') }}" target="_blank" class="block px-6 py-3 hover:bg-gray-700">
+                    <i class="fas fa-external-link-alt w-6"></i> View Site
+                </a>
+                <a href="{{ url_for('admin_logout') }}" class="block px-6 py-3 hover:bg-gray-700 text-red-400">
+                    <i class="fas fa-sign-out-alt w-6"></i> Logout
+                </a>
+            </nav>
+        </aside>
+        
+        <main class="flex-1 ml-64 p-8">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="mb-6">
+                    {% for category, message in messages %}
+                    <div class="p-4 mb-2 rounded-lg {% if category == 'success' %}bg-green-100 text-green-700 border border-green-400{% else %}bg-red-100 text-red-700 border border-red-400{% endif %}">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+            
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,71 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{% if product %}Edit{% else %}Add{% endif %} Product - Henri Admin{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">{% if product %}Edit{% else %}Add{% endif %} Product</h1>
+    <a href="{{ url_for('admin_products') }}" class="text-primary hover:underline">
+        <i class="fas fa-arrow-left"></i> Back to Products
+    </a>
+</div>
+
+<div class="bg-white rounded-lg shadow p-6">
+    <form method="POST" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Product Name *</label>
+                <input type="text" name="name" required value="{{ product.name if product else '' }}" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-primary">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                <input type="text" name="category" required value="{{ product.category if product else '' }}" list="categories" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-primary">
+                <datalist id="categories">
+                    <option value="Lip Care">
+                    <option value="Body Care">
+                    <option value="Tablet">
+                    <option value="Cream">
+                    <option value="Soap">
+                    <option value="Sunscreen">
+                    <option value="Gel">
+                    <option value="Lotion">
+                    <option value="Face Mask">
+                </datalist>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Current Stock</label>
+                <input type="number" name="current_stock" step="0.01" value="{{ product.current_stock if product else '0' }}" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-primary">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Minimum Stock</label>
+                <input type="number" name="minimum_stock" step="0.01" value="{{ product.minimum_stock if product else '0' }}" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-primary">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Sale Price *</label>
+                <input type="number" name="sale_price" step="0.01" required value="{{ product.sale_price if product else '' }}" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-primary">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Purchase Price</label>
+                <input type="number" name="purchase_price" step="0.01" value="{{ product.purchase_price if product else '0' }}" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-primary">
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
+                <input type="url" name="image_url" value="{{ product.image_url if product else '' }}" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-primary">
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea name="description" rows="3" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-primary">{{ product.description if product else '' }}</textarea>
+            </div>
+            <div>
+                <label class="flex items-center">
+                    <input type="checkbox" name="is_active" {% if product and product.is_active %}checked{% elif not product %}checked{% endif %} class="mr-2">
+                    <span class="text-sm font-medium text-gray-700">Active</span>
+                </label>
+            </div>
+        </div>
+        <button type="submit" class="w-full bg-primary text-white py-3 rounded-lg hover:bg-secondary transition">
+            {% if product %}Update{% else %}Add{% endif %} Product
+        </button>
+    </form>
+</div>
+{% endblock %}

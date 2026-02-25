@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Henri - Beauty & Skincare{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .category-btn.active {
+            background-color: #d4a574;
+            color: white;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between py-4">
+                <a href="{{ url_for('index') }}" class="text-2xl font-bold text-gray-800">Henri</a>
+                
+                <nav class="hidden md:flex items-center space-x-6">
+                    <a href="{{ url_for('index') }}" class="text-gray-600 hover:text-primary transition">Home</a>
+                    <div class="relative group">
+                        <button class="text-gray-600 hover:text-primary transition">Categories</button>
+                        <div class="absolute left-0 mt-2 w-48 bg-white shadow-lg rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                            {% for cat in g.categories if g.categories %}
+                            <a href="{{ url_for('category', category=cat) }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">{{ cat }}</a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </nav>
+                
+                <div class="flex items-center space-x-4">
+                    <form action="{{ url_for('search') }}" method="get" class="hidden md:flex">
+                        <input type="text" name="q" placeholder="Search products..." class="border border-gray-300 rounded-l-lg px-4 py-2 focus:outline-none focus:border-primary">
+                        <button type="submit" class="bg-primary text-white px-4 py-2 rounded-r-lg hover:bg-secondary transition">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
+                    
+                    <a href="{{ url_for('cart') }}" class="relative text-gray-600 hover:text-primary transition">
+                        <i class="fas fa-shopping-cart text-xl"></i>
+                        {% if session.get('cart') and session.get('cart')|length > 0 %}
+                        <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{{ session.get('cart')|length }}</span>
+                        {% endif %}
+                    </a>
+                    
+                    {% if session.get('user_id') %}
+                    <div class="relative group">
+                        <button class="text-gray-600 hover:text-primary transition">
+                            <i class="fas fa-user text-xl"></i>
+                        </button>
+                        <div class="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                            <a href="{{ url_for('my_orders') }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">My Orders</a>
+                            <a href="{{ url_for('logout') }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Logout</a>
+                        </div>
+                    </div>
+                    {% else %}
+                    <a href="{{ url_for('login') }}" class="text-gray-600 hover:text-primary transition">Login</a>
+                    {% endif %}
+                    
+                    <a href="{{ url_for('admin_dashboard') }}" class="text-gray-400 hover:text-gray-600 transition" title="Admin">
+                        <i class="fas fa-cog text-xl"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="container mx-auto px-4 mt-4">
+            {% for category, message in messages %}
+            <div class="p-4 mb-2 rounded-lg {% if category == 'success' %}bg-green-100 text-green-700 border border-green-400{% else %}bg-red-100 text-red-700 border border-red-400{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endwith %}
+    
+    <main class="flex-grow">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <footer class="bg-gray-800 text-white mt-12">
+        <div class="container mx-auto px-4 py-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4">Henri</h3>
+                    <p class="text-gray-400">Your trusted destination for beauty and skincare products.</p>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Quick Links</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="{{ url_for('index') }}" class="hover:text-white transition">Home</a></li>
+                        <li><a href="{{ url_for('cart') }}" class="hover:text-white transition">Cart</a></li>
+                        <li><a href="{{ url_for('my_orders') }}" class="hover:text-white transition">My Orders</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Categories</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        {% for cat in g.categories[:5] if g.categories %}
+                        <li><a href="{{ url_for('category', category=cat) }}" class="hover:text-white transition">{{ cat }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Contact</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><i class="fas fa-envelope mr-2"></i>contact@henri.com</li>
+                        <li><i class="fas fa-phone mr-2"></i>+91 1234567890</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+                <p>&copy; 2024 Henri. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <div id="chatbot-toggle" class="fixed bottom-6 right-6 bg-primary text-white w-14 h-14 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:bg-secondary transition z-50" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999;">
+        <i class="fas fa-comments text-xl"></i>
+    </div>
+    
+    <div id="chatbot-container" style="position: fixed; bottom: 96px; right: 24px; width: 384px; max-width: calc(100vw - 3rem); z-index: 9999; display: none;">
+        <div class="bg-primary text-white p-4 rounded-t-lg flex justify-between items-center">
+            <h3 class="font-semibold">Henri Assistant</h3>
+            <button id="chatbot-close" class="text-white hover:text-gray-200">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="chatbot-messages" class="h-80 overflow-y-auto p-4 space-y-3 bg-gray-50" style="height: 320px;">
+            <div class="bg-white p-3 rounded-lg shadow-sm border">
+                <p class="text-sm">Hi! I'm Henri's assistant. Ask me about our products or any health/skincare concerns!</p>
+            </div>
+        </div>
+        <div class="p-3 border-t bg-white rounded-b-lg">
+            <form id="chatbot-form" class="flex gap-2">
+                <input type="text" id="chatbot-input" placeholder="Type your message..." class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:border-primary text-sm">
+                <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var toggle = document.getElementById('chatbot-toggle');
+            var container = document.getElementById('chatbot-container');
+            var closeBtn = document.getElementById('chatbot-close');
+            var form = document.getElementById('chatbot-form');
+            var input = document.getElementById('chatbot-input');
+            var messages = document.getElementById('chatbot-messages');
+            
+            toggle.addEventListener('click', function() {
+                if (container.style.display === 'none') {
+                    container.style.display = 'block';
+                } else {
+                    container.style.display = 'none';
+                }
+            });
+            
+            closeBtn.addEventListener('click', function() {
+                container.style.display = 'none';
+            });
+            
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                var message = input.value.trim();
+                if (!message) return;
+                
+                var userMsg = document.createElement('div');
+                userMsg.className = 'bg-primary text-white p-3 rounded-lg shadow-sm ml-8';
+                userMsg.innerHTML = '<p class="text-sm">' + message + '</p>';
+                messages.appendChild(userMsg);
+                input.value = '';
+                messages.scrollTop = messages.scrollHeight;
+                
+                var loading = document.createElement('div');
+                loading.className = 'bg-white p-3 rounded-lg shadow-sm border mr-8';
+                loading.id = 'loading';
+                loading.innerHTML = '<p class="text-sm text-gray-500">Thinking...</p>';
+                messages.appendChild(loading);
+                messages.scrollTop = messages.scrollHeight;
+                
+                fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: message })
+                })
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    var loadingEl = document.getElementById('loading');
+                    if (loadingEl) loadingEl.remove();
+                    var botMsg = document.createElement('div');
+                    botMsg.className = 'bg-white p-3 rounded-lg shadow-sm border mr-8';
+                    botMsg.innerHTML = '<p class="text-sm">' + data.response + '</p>';
+                    messages.appendChild(botMsg);
+                    messages.scrollTop = messages.scrollHeight;
+                })
+                .catch(function() {
+                    var loadingEl = document.getElementById('loading');
+                    if (loadingEl) loadingEl.remove();
+                    var errorMsg = document.createElement('div');
+                    errorMsg.className = 'bg-red-100 text-red-700 p-3 rounded-lg shadow-sm mr-8';
+                    errorMsg.innerHTML = '<p class="text-sm">Sorry, something went wrong. Please try again.</p>';
+                    messages.appendChild(errorMsg);
+                    messages.scrollTop = messages.scrollHeight;
+                });
+            });
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
