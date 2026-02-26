@@ -1,5 +1,6 @@
 import os
 import requests
+import tempfile
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
@@ -9,12 +10,16 @@ from functools import wraps
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'henri-secret-key-change-in-production')
 
-db_path = os.environ.get('DATABASE_URL', 'henri.db')
-if db_path.startswith('postgres://'):
-    db_path = db_path.replace('postgres://', 'postgresql://', 1)
-app.config['SQLALCHEMY_DATABASE_URI'] = db_path
+db_path = os.environ.get('DATABASE_URL', '')
+if db_path:
+    if db_path.startswith('postgres://'):
+        db_path = db_path.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_path
+else:
+    db_path = os.path.join(tempfile.gettempdir(), 'henri.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SESSION_TYPE'] = 'filesystem'
 
 db = SQLAlchemy(app)
 
