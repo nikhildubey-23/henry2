@@ -2,6 +2,15 @@
 
 {% block title %}Dashboard - Henri Admin{% endblock %}
 
+{% block extra_css %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <h1 class="text-2xl font-bold mb-8">Dashboard</h1>
 
@@ -55,6 +64,38 @@
     </div>
 </div>
 
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-semibold mb-4">Orders by Status</h2>
+        <div class="chart-container">
+            <canvas id="ordersStatusChart"></canvas>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-semibold mb-4">Products by Category</h2>
+        <div class="chart-container">
+            <canvas id="categoryChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-semibold mb-4">Sales (Last 30 Days)</h2>
+        <div class="chart-container">
+            <canvas id="salesChart"></canvas>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-semibold mb-4">Top Selling Products</h2>
+        <div class="chart-container">
+            <canvas id="topProductsChart"></canvas>
+        </div>
+    </div>
+</div>
+
 <div class="bg-white rounded-lg shadow p-6">
     <h2 class="text-xl font-semibold mb-4">Recent Orders</h2>
     <div class="overflow-x-auto">
@@ -101,4 +142,71 @@
         </table>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const statusData = {
+        labels: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
+        datasets: [{
+            data: [
+                {{ orders_by_status.pending }},
+                {{ orders_by_status.processing }},
+                {{ orders_by_status.shipped }},
+                {{ orders_by_status.delivered }},
+                {{ orders_by_status.cancelled }}
+            ],
+            backgroundColor: ['#FBBF24', '#3B82F6', '#A855F7', '#22C55E', '#EF4444']
+        }]
+    };
+    new Chart(document.getElementById('ordersStatusChart'), {
+        type: 'doughnut',
+        data: statusData,
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    const categoryData = {
+        labels: {{ products_by_category|map(attribute='0')|list|tojson }},
+        datasets: [{
+            label: 'Products',
+            data: {{ products_by_category|map(attribute='1')|list|tojson }},
+            backgroundColor: ['#F59E0B', '#3B82F6', '#10B981', '#8B5CF6', '#EF4444', '#EC4899', '#06B6D4', '#84CC16', '#F97316']
+        }]
+    };
+    new Chart(document.getElementById('categoryChart'), {
+        type: 'bar',
+        data: categoryData,
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
+    });
+
+    const salesData = {
+        labels: {{ daily_sales|map(attribute='0')|list|tojson }},
+        datasets: [{
+            label: 'Sales (₹)',
+            data: {{ daily_sales|map(attribute='1')|list|tojson }},
+            borderColor: '#3B82F6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            fill: true,
+            tension: 0.4
+        }]
+    };
+    new Chart(document.getElementById('salesChart'), {
+        type: 'line',
+        data: salesData,
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    const topProductsData = {
+        labels: {{ top_products|map(attribute='0')|list|tojson }},
+        datasets: [{
+            label: 'Units Sold',
+            data: {{ top_products|map(attribute='1')|list|tojson }},
+            backgroundColor: ['#F59E0B', '#3B82F6', '#10B981', '#8B5CF6', '#EF4444']
+        }]
+    };
+    new Chart(document.getElementById('topProductsChart'), {
+        type: 'bar',
+        data: topProductsData,
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
+    });
+</script>
 {% endblock %}

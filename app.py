@@ -28,6 +28,7 @@ class Product(db.Model):
     minimum_stock = db.Column(db.Float, default=0)
     sale_price = db.Column(db.Float, nullable=False)
     purchase_price = db.Column(db.Float, default=0)
+    demo_price = db.Column(db.Float, default=0)
     description = db.Column(db.Text, default='')
     image_url = db.Column(db.String(500), default='')
     is_active = db.Column(db.Boolean, default=True)
@@ -42,6 +43,7 @@ class Product(db.Model):
             'minimum_stock': self.minimum_stock,
             'sale_price': self.sale_price,
             'purchase_price': self.purchase_price,
+            'demo_price': self.demo_price,
             'description': self.description,
             'image_url': self.image_url,
             'in_stock': self.current_stock > 0
@@ -398,12 +400,46 @@ def admin_dashboard():
     
     recent_orders = Order.query.order_by(Order.created_at.desc()).limit(10).all()
     
+    orders_by_status = {
+        'pending': Order.query.filter_by(status='pending').count(),
+        'processing': Order.query.filter_by(status='processing').count(),
+        'shipped': Order.query.filter_by(status='shipped').count(),
+        'delivered': Order.query.filter_by(status='delivered').count(),
+        'cancelled': Order.query.filter_by(status='cancelled').count(),
+    }
+    
+    from sqlalchemy import func
+    products_by_category = db.session.query(
+        Product.category, 
+        func.count(Product.id)
+    ).group_by(Product.category).all()
+    
+    from datetime import datetime, timedelta
+    last_30_days = datetime.utcnow() - timedelta(days=30)
+    daily_sales = db.session.query(
+        func.date(Order.created_at).label('date'),
+        func.sum(Order.total).label('total'),
+        func.count(Order.id).label('count')
+    ).filter(Order.created_at >= last_30_days).group_by(func.date(Order.created_at)).all()
+    
+    top_products = db.session.query(
+        OrderItem.product_name,
+        func.sum(OrderItem.quantity).label('total_sold')
+    ).join(Order).filter(Order.status != 'cancelled').group_by(OrderItem.product_name).order_by(func.sum(OrderItem.quantity).desc()).limit(5).all()
+    
+    total_revenue = db.session.query(func.sum(Order.total)).scalar() or 0
+    
     return render_template('admin/dashboard.html', 
                          total_orders=total_orders,
                          pending_orders=pending_orders,
                          total_products=total_products,
                          low_stock=low_stock,
-                         recent_orders=recent_orders)
+                         recent_orders=recent_orders,
+                         orders_by_status=orders_by_status,
+                         products_by_category=products_by_category,
+                         daily_sales=daily_sales,
+                         top_products=top_products,
+                         total_revenue=total_revenue)
 
 @app.route('/admin/orders')
 @admin_required
@@ -554,18 +590,61 @@ def chat():
         return jsonify({'error': 'No message provided'}), 400
     
     products = Product.query.filter_by(is_active=True).all()
-    product_list = "\n".join([f"- {p.name} ({p.category}): ${p.sale_price} - {p.description[:100] if p.description else 'No description'}" for p in products])
     
-    system_prompt = f"""You are a helpful assistant for Henri, a beauty and skincare online store. You help customers with:
-1. Product information - pricing, availability, descriptions
-2. Health and skincare advice
-3. Order-related questions
-4. General inquiries about the store
+    product_list = "\n".join([
+        f"- {p.name} ({p.category}): ₹{p.sale_price} (MRP: ₹{p.demo_price if p.demo_price else p.sale_price*2}) | Stock: {'In Stock (' + str(int(p.current_stock)) + ')' if p.current_stock > 0 else 'Out of Stock'} | {p.description[:200] if p.description else 'No description'}"
+        for p in products
+    ])
+    
+    product_purposes = """
+PRODUCT PURPOSES & USES:
+- LIPSTAR (Lip Care): For dry lips, lip hydration, lip shine, lip protection
+- WHITOLYN (Body Care): For skin brightening, fairness, dark spots removal, body glow
+- XANONICE TAB (Tablet): For skin health, glowing skin, internal skin nutrition
+- Picotry Cream (Cream): For pigmentation, skin whitening, age spots, melasma
+- HZEUP SOAP (Soap): For acne, oily skin, antibacterial cleansing, pimple control
+- ROOFS SPF (Sunscreen): For sun protection, UV protection, SPF 50+
+- Opuoxy Bright (Cream): For brightening, dull skin, dark circles, fairness
+- GLOWORG (Cream): For fairness, moisturizing, SPF 20 protection, 24hr hydration
+- NIDGLOW - G (Gel): For glowing skin, pores, acne marks, collagen boost
+- LEUCODERM (Lotion): For vitiligo, depigmentation, skin patches
+- PDRN MASK (Face Mask): For skin repair, acne scars, wound healing, damaged skin
+- Scparal Mask (Face Mask): For sensitive skin, redness, calming irritated skin
+- ECTOSOL SS TINT SPF 50 (Sunscreen): For tinted coverage, SPF 50, daily use
+- Elight Sunscreen (Sunscreen): For sensitive skin, reef-safe, chemical-free
+- Cuhair Tab (Tablet): For hair growth, hair fall control, hair thickness
+"""
+    
+    system_prompt = f"""You are a beauty and skincare expert assistant for Henri Store. Your job is to understand customer needs and recommend the RIGHT products from our store.
 
-Available products:
+CUSTOMER NEEDS MATCHING:
+When a customer describes their problem, match it to the right product:
+
+- Dry lips → LIPSTAR
+- Fairness/brightening → WHITOLYN, Opuoxy Bright, GLOWORG, Picotry Cream
+- Skin health from within → XANONICE TAB
+- Acne/pimples → HZEUP SOAP, NIDGLOW - G
+- Sun protection → ROOFS SPF, ECTOSOL SS TINT SPF 50, Elight Sunscreen
+- Dark spots/pigmentation → Picotry Cream, Opuoxy Bright
+- Hair growth/hair fall → Cuhair Tab
+- Sensitive/irritated skin → Scparal Mask
+- Skin repair/scars → PDRN MASK
+- Vitiligo/depigmentation → LEUCODERM
+
+IMPORTANT RULES:
+1. Always check if product is in stock before recommending
+2. Mention the price and the discount (MRP vs sale price)
+3. Be friendly and helpful
+4. If customer mentions a concern, suggest 1-3 relevant products
+5. If out of stock, suggest alternatives
+6. Ask follow-up questions to understand their needs better
+
+{product_purposes}
+
+AVAILABLE PRODUCTS:
 {product_list}
 
-Provide helpful, accurate responses. Keep responses concise and friendly. If you're giving health advice, include a disclaimer to consult a healthcare professional for specific concerns."""
+Provide personalized recommendations with product names, prices, and why it's good for their specific need."""
 
     try:
         groq_api_key = os.environ.get('GROQ_API_KEY')
@@ -585,7 +664,7 @@ Provide helpful, accurate responses. Keep responses concise and friendly. If you
                     {'role': 'user', 'content': user_message}
                 ],
                 'temperature': 0.7,
-                'max_tokens': 500
+                'max_tokens': 600
             }
         )
         
@@ -604,6 +683,13 @@ def init_db():
     with app.app_context():
         db.create_all()
         
+        try:
+            db.session.execute(db.text('ALTER TABLE product ADD COLUMN demo_price FLOAT DEFAULT 0'))
+            db.session.commit()
+            print('Added demo_price column to database')
+        except:
+            db.session.rollback()
+        
         admin = User.query.filter_by(email='admin@henri.com', is_admin=True).first()
         if not admin:
             admin = User(
@@ -616,23 +702,58 @@ def init_db():
             db.session.commit()
             print('Admin user created: admin@henri.com / admin123')
         
+        default_descriptions = {
+            'LIPSTAR': 'LIPSTAR is a premium lip care product designed to provide deep hydration and a natural shine. Formulated with vitamin E and natural oils, it helps prevent dry lips and gives a subtle, lasting gloss. Perfect for daily use, this lip care essential suits all skin types and provides protection against environmental damage.',
+            'WHITOLYN': 'WHITOLYN is an advanced body care lotion that brightens and evens skin tone. Enriched with glutathione and Kojic acid, it helps reduce dark spots, blemishes, and hyperpigmentation. Regular application reveals smoother, radiant skin while providing long-lasting moisturization.',
+            'XANONICE TAB': 'XANONICE TAB is a dietary supplement formulated to support overall skin health from within. Contains essential vitamins and minerals that promote collagen production, reduce inflammation, and protect against oxidative stress.',
+            'Picotry Cream': 'Picotry Cream is a specialized skincare treatment targeting stubborn pigmentation and uneven skin tone. Its advanced formula combines natural extracts with proven whitening agents to deliver visible results. Effective for age spots, sun damage, and melasma.',
+            'HZEUP SOAP': 'HZEUP SOAP is an antibacterial soap infused with herbal extracts for deep cleansing. Formulated with neem and tea tree oil, it effectively fights acne-causing bacteria while being gentle on skin.',
+            'ROOFS SPF': 'ROOFS SPF is a broad-spectrum sunscreen providing SPF 50+ protection against UVA and UVB rays. Lightweight and non-greasy formula absorbs quickly without white cast. Enriched with antioxidants to prevent sun damage.',
+            'Opuoxy Bright': 'Opuoxy Bright is a revolutionary brightening cream that targets dullness and uneven skin tone. Contains Oxyresveratrol and vitamin C for powerful antioxidant protection.',
+            'GLOWORG': 'GLOWORG is an all-in-one fairness cream that works to brighten, moisturize, and protect skin. Infused with arbutin and mulberry extract for visibly lighter skin tone.',
+            'NIDGLOW - G': 'NIDGLOW - G is a premium face gel designed for glowing, radiant skin. Contains glycolic acid and vitamin C to exfoliate dead skin cells and boost collagen.',
+            'LEUCODERM': 'LEUCODERM is a medicated lotion specifically formulated for skin depigmentation treatment. Helps manage vitiligo and hypopigmentation by stimulating melanocyte activity.',
+            'PDRN MASK': 'PDRN MASK is an advanced sheet mask infused with Polydeoxyribonucleotide (PDRN) for intensive skin repair. Helps accelerate wound healing, reduce acne scars, and improve skin texture.',
+            'Scparal Mask': 'Scparal Mask is a soothing face mask enriched with centella asiatica and allantoin. Specifically designed to calm irritated skin, reduce redness, and repair skin barrier.',
+            'ECTOSOL SS TINT SPF 50': 'ECTOSOL SS TINT SPF 50 is a tinted sunscreen that provides flawless coverage while protecting skin. Offers high SPF 50 protection against harmful UV rays.',
+            'Elight Sunscreen': 'Elight Sunscreen is a lightweight, reef-safe sunscreen suitable for sensitive skin. Provides broad-spectrum SPF 50 protection without harsh chemicals.',
+            'Cuhair Tab': 'Cuhair Tab is a hair growth supplement enriched with biotin, zinc, and essential vitamins. Supports healthy hair growth from within.',
+        }
+        
+        default_demo_prices = {
+            'LIPSTAR': 550, 'WHITOLYN': 360, 'XANONICE TAB': 360, 'Picotry Cream': 1350,
+            'HZEUP SOAP': 310, 'ROOFS SPF': 999, 'Opuoxy Bright': 680, 'GLOWORG': 730,
+            'NIDGLOW - G': 1380, 'LEUCODERM': 1790, 'PDRN MASK': 700, 'Scparal Mask': 300,
+            'ECTOSOL SS TINT SPF 50': 1180, 'Elight Sunscreen': 850, 'Cuhair Tab': 284,
+        }
+        
+        for name, desc in default_descriptions.items():
+            product = Product.query.filter_by(name=name).first()
+            if product:
+                if not product.description:
+                    product.description = desc
+                if not product.demo_price:
+                    product.demo_price = default_demo_prices.get(name, 0)
+        
+        db.session.commit()
+        
         if Product.query.count() == 0:
             products_data = [
-                {'name': 'LIPSTAR', 'category': 'Lip Care', 'current_stock': 0, 'minimum_stock': 3, 'sale_price': 275, 'purchase_price': 65.63},
-                {'name': 'WHITOLYN', 'category': 'Body Care', 'current_stock': 0, 'minimum_stock': 0, 'sale_price': 180, 'purchase_price': 122.04},
-                {'name': 'XANONICE TAB', 'category': 'Tablet', 'current_stock': 10, 'minimum_stock': 0, 'sale_price': 180, 'purchase_price': 180},
-                {'name': 'Picotry Cream', 'category': 'Cream', 'current_stock': 0, 'minimum_stock': 0, 'sale_price': 675, 'purchase_price': 288.75},
-                {'name': 'HZEUP SOAP', 'category': 'Soap', 'current_stock': 0, 'minimum_stock': 5, 'sale_price': 155, 'purchase_price': 42},
-                {'name': 'ROOFS SPF', 'category': 'Sunscreen', 'current_stock': 0, 'minimum_stock': 2, 'sale_price': 500, 'purchase_price': 260},
-                {'name': 'Opuoxy Bright', 'category': 'Cream', 'current_stock': 14, 'minimum_stock': 0, 'sale_price': 340, 'purchase_price': 230.51},
-                {'name': 'GLOWORG', 'category': 'Cream', 'current_stock': 0, 'minimum_stock': 3, 'sale_price': 365, 'purchase_price': 20},
-                {'name': 'NIDGLOW - G', 'category': 'Gel', 'current_stock': 1, 'minimum_stock': 0, 'sale_price': 690, 'purchase_price': 198.8},
-                {'name': 'LEUCODERM', 'category': 'Lotion', 'current_stock': 0, 'minimum_stock': 2, 'sale_price': 895, 'purchase_price': 322.5},
-                {'name': 'PDRN MASK', 'category': 'Face Mask', 'current_stock': 0, 'minimum_stock': 0, 'sale_price': 350, 'purchase_price': 0},
-                {'name': 'Scparal Mask', 'category': 'Face Mask', 'current_stock': 0, 'minimum_stock': 0, 'sale_price': 150, 'purchase_price': 0},
-                {'name': 'ECTOSOL SS TINT SPF 50', 'category': 'Sunscreen', 'current_stock': 3, 'minimum_stock': 0, 'sale_price': 590, 'purchase_price': 236},
-                {'name': 'Elight Sunscreen', 'category': 'Sunscreen', 'current_stock': 7, 'minimum_stock': 0, 'sale_price': 425, 'purchase_price': 174.6},
-                {'name': 'Cuhair Tab', 'category': 'Tablet', 'current_stock': 30, 'minimum_stock': 0, 'sale_price': 142, 'purchase_price': 57.766},
+                {'name': 'LIPSTAR', 'category': 'Lip Care', 'current_stock': 0, 'minimum_stock': 3, 'sale_price': 275, 'purchase_price': 65.63, 'demo_price': 550, 'description': 'LIPSTAR is a premium lip care product designed to provide deep hydration and a natural shine. Formulated with vitamin E and natural oils, it helps prevent dry lips and gives a subtle, lasting gloss. Perfect for daily use, this lip care essential suits all skin types and provides protection against environmental damage.'},
+                {'name': 'WHITOLYN', 'category': 'Body Care', 'current_stock': 0, 'minimum_stock': 0, 'sale_price': 180, 'purchase_price': 122.04, 'demo_price': 360, 'description': 'WHITOLYN is an advanced body care lotion that brightens and evens skin tone. Enriched with glutathione and Kojic acid, it helps reduce dark spots, blemishes, and hyperpigmentation. Regular application reveals smoother, radiant skin while providing long-lasting moisturization.'},
+                {'name': 'XANONICE TAB', 'category': 'Tablet', 'current_stock': 10, 'minimum_stock': 0, 'sale_price': 180, 'purchase_price': 180, 'demo_price': 360, 'description': 'XANONICE TAB is a dietary supplement formulated to support overall skin health from within. Contains essential vitamins and minerals that promote collagen production, reduce inflammation, and protect against oxidative stress. Recommended for achieving healthy, glowing skin.'},
+                {'name': 'Picotry Cream', 'category': 'Cream', 'current_stock': 0, 'minimum_stock': 0, 'sale_price': 675, 'purchase_price': 288.75, 'demo_price': 1350, 'description': 'Picotry Cream is a specialized skincare treatment targeting stubborn pigmentation and uneven skin tone. Its advanced formula combines natural extracts with proven whitening agents to deliver visible results. Effective for age spots, sun damage, and melasma. Suitable for all skin types.'},
+                {'name': 'HZEUP SOAP', 'category': 'Soap', 'current_stock': 0, 'minimum_stock': 5, 'sale_price': 155, 'purchase_price': 42, 'demo_price': 310, 'description': 'HZEUP SOAP is an antibacterial soap infused with herbal extracts for deep cleansing. Formulated with neem and tea tree oil, it effectively fights acne-causing bacteria while being gentle on skin. Helps reduce breakouts, controls excess oil, and keeps skin fresh throughout the day.'},
+                {'name': 'ROOFS SPF', 'category': 'Sunscreen', 'current_stock': 0, 'minimum_stock': 2, 'sale_price': 500, 'purchase_price': 260, 'demo_price': 999, 'description': 'ROOFS SPF is a broad-spectrum sunscreen providing SPF 50+ protection against UVA and UVB rays. Lightweight and non-greasy formula absorbs quickly without white cast. Enriched with antioxidants to prevent sun damage, premature aging, and skin darkening. Water-resistant for up to 80 minutes.'},
+                {'name': 'Opuoxy Bright', 'category': 'Cream', 'current_stock': 14, 'minimum_stock': 0, 'sale_price': 340, 'purchase_price': 230.51, 'demo_price': 680, 'description': 'Opuoxy Bright is a revolutionary brightening cream that targets dullness and uneven skin tone. Contains Oxyresveratrol and vitamin C for powerful antioxidant protection. Reduces dark circles, blemishes, and age spots while improving skin elasticity. For best results, use twice daily.'},
+                {'name': 'GLOWORG', 'category': 'Cream', 'current_stock': 0, 'minimum_stock': 3, 'sale_price': 365, 'purchase_price': 20, 'demo_price': 730, 'description': 'GLOWORG is an all-in-one fairness cream that works to brighten, moisturize, and protect skin. Infused with arbutin and mulberry extract, it helps reduce melanin production for visibly lighter skin tone. Provides SPF 20 sun protection and keeps skin hydrated for up to 24 hours.'},
+                {'name': 'NIDGLOW - G', 'category': 'Gel', 'current_stock': 1, 'minimum_stock': 0, 'sale_price': 690, 'purchase_price': 198.8, 'demo_price': 1380, 'description': 'NIDGLOW - G is a premium face gel designed for glowing, radiant skin. Contains glycolic acid and vitamin C to exfoliate dead skin cells and boost collagen. Helps reduce pores, acne marks, and fine lines. Also provides cooling effect and reduces tanning. Apply on clean face before moisturizer.'},
+                {'name': 'LEUCODERM', 'category': 'Lotion', 'current_stock': 0, 'minimum_stock': 2, 'sale_price': 895, 'purchase_price': 322.5, 'demo_price': 1790, 'description': 'LEUCODERM is a medicated lotion specifically formulated for skin depigmentation treatment. Helps manage vitiligo and hypopigmentation by stimulating melanocyte activity. Contains monobenzyl ether of hydroquinone. For external use only. Consult dermatologist before use.'},
+                {'name': 'PDRN MASK', 'category': 'Face Mask', 'current_stock': 0, 'minimum_stock': 0, 'sale_price': 350, 'purchase_price': 0, 'demo_price': 700, 'description': 'PDRN MASK is an advanced sheet mask infused with Polydeoxyribonucleotide (PDRN) for intensive skin repair. Helps accelerate wound healing, reduce acne scars, and improve skin texture. Provides deep hydration and boosts skin elasticity. Perfect for damaged or stressed skin.'},
+                {'name': 'Scparal Mask', 'category': 'Face Mask', 'current_stock': 0, 'minimum_stock': 0, 'sale_price': 150, 'purchase_price': 0, 'demo_price': 300, 'description': 'Scparal Mask is a soothing face mask enriched with centella asiatica and allantoin. Specifically designed to calm irritated skin, reduce redness, and repair skin barrier. Ideal for sensitive skin or after cosmetic procedures. Use 2-3 times per week for optimal results.'},
+                {'name': 'ECTOSOL SS TINT SPF 50', 'category': 'Sunscreen', 'current_stock': 3, 'minimum_stock': 0, 'sale_price': 590, 'purchase_price': 236, 'demo_price': 1180, 'description': 'ECTOSOL SS TINT SPF 50 is a tinted sunscreen that provides flawless coverage while protecting skin. Offers high SPF 50 protection against harmful UV rays. The light tint blends seamlessly with natural skin tone. Water-based formula is non-comedogenic and suitable for daily use.'},
+                {'name': 'Elight Sunscreen', 'category': 'Sunscreen', 'current_stock': 7, 'minimum_stock': 0, 'sale_price': 425, 'purchase_price': 174.6, 'demo_price': 850, 'description': 'Elight Sunscreen is a lightweight, reef-safe sunscreen suitable for sensitive skin. Provides broad-spectrum SPF 50 protection without harsh chemicals. Enriched with aloe vera and chamomile to soothe and protect. Fast-absorbing formula leaves no residue. Perfect for outdoor activities.'},
+                {'name': 'Cuhair Tab', 'category': 'Tablet', 'current_stock': 30, 'minimum_stock': 0, 'sale_price': 142, 'purchase_price': 57.766, 'demo_price': 284, 'description': 'Cuhair Tab is a hair growth supplement enriched with biotin, zinc, and essential vitamins. Supports healthy hair growth from within by providing nutrients directly to hair follicles. Helps reduce hair fall, improve hair thickness, and enhance overall hair health. Take one tablet daily.'},
             ]
             
             for p in products_data:
