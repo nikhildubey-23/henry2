@@ -6,6 +6,7 @@ from flask_mongoengine import MongoEngine
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from dotenv import load_dotenv
+from urllib.parse import urlparse, quote_plus
 
 load_dotenv()
 
@@ -14,8 +15,12 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'henri-secret-key-change
 
 db_uri = os.environ.get('DATABASE_URL', '')
 if db_uri and db_uri.startswith('mongodb'):
+    parsed = urlparse(db_uri)
+    username = quote_plus(parsed.username) if parsed.username else ''
+    password = quote_plus(parsed.password) if parsed.password else ''
+    encoded_uri = f"{parsed.scheme}://{username}:{password}@{parsed.netloc}{parsed.path}"
     app.config['MONGODB_SETTINGS'] = {
-        'host': db_uri,
+        'host': encoded_uri,
         'connect': False,
         'db': 'henri'
     }
