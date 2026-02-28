@@ -2,7 +2,6 @@ import os
 import sys
 import requests
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 
 import flask.json
 if not hasattr(flask.json, 'JSONEncoder'):
@@ -12,10 +11,12 @@ if not hasattr(flask.json, 'JSONEncoder'):
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from dotenv import load_dotenv
-import mongoengine
-from mongoengine import Document, StringField, FloatField, BooleanField, DateTimeField, ObjectIdField, ListField, DictField, ReferenceField
 
 load_dotenv()
+
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+import mongoengine
+from mongoengine import Document, StringField, FloatField, BooleanField, DateTimeField, ObjectIdField, ListField, DictField, ReferenceField
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'henri-secret-key-change-in-production')
