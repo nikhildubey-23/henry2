@@ -1,7 +1,14 @@
 import os
+import sys
 import requests
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+
+import flask.json
+if not hasattr(flask.json, 'JSONEncoder'):
+    from json import JSONEncoder as _JSONEncoder
+    flask.json.JSONEncoder = _JSONEncoder
+
 from flask_mongoengine import MongoEngine
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
