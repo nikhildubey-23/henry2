@@ -9,11 +9,11 @@ if not hasattr(flask.json, 'JSONEncoder'):
     from json import JSONEncoder as _JSONEncoder
     flask.json.JSONEncoder = _JSONEncoder
 
-from flask_mongoengine import MongoEngine
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from dotenv import load_dotenv
-from urllib.parse import urlparse, quote_plus
+import mongoengine
+from mongoengine import Document, StringField, FloatField, BooleanField, DateTimeField, ObjectIdField, ListField, DictField, ReferenceField
 
 load_dotenv()
 
@@ -22,36 +22,37 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'henri-secret-key-change
 
 db_uri = os.environ.get('DATABASE_URL', '')
 if db_uri and db_uri.startswith('mongodb'):
+    from urllib.parse import urlparse, quote
     parsed = urlparse(db_uri)
-    username = quote_plus(parsed.username) if parsed.username else ''
-    password = quote_plus(parsed.password) if parsed.password else ''
-    encoded_uri = f"{parsed.scheme}://{username}:{password}@{parsed.netloc}{parsed.path}"
-    app.config['MONGODB_SETTINGS'] = {
-        'host': encoded_uri,
-        'connect': False,
-        'db': 'henri'
-    }
+    user = parsed.username or ''
+    pwd = parsed.password or ''
+    host = parsed.hostname or ''
+    port = parsed.port or ''
+    path = parsed.path or ''
+    encoded_uri = f"mongodb+srv://{quote(user)}:{quote(pwd)}@{host}"
+    if port:
+        encoded_uri += f":{port}"
+    encoded_uri += path
+    mongoengine.connect('henri', host=encoded_uri)
 else:
-    app.config['MONGODB_SETTINGS'] = {
-        'db': 'henri',
-        'host': 'localhost',
-        'port': 27017
-    }
+    mongoengine.connect('henri', host='localhost', port=27017)
 
-db = MongoEngine(app)
+db = mongoengine
 
-class Product(db.Document):
-    name = db.StringField(required=True, max_length=200)
-    category = db.StringField(required=True, max_length=100)
-    current_stock = db.FloatField(default=0)
-    minimum_stock = db.FloatField(default=0)
-    sale_price = db.FloatField(required=True)
-    purchase_price = db.FloatField(default=0)
-    demo_price = db.FloatField(default=0)
-    description = db.StringField(default='')
-    image_url = db.StringField(max_length=500, default='')
-    is_active = db.BooleanField(default=True)
-    created_at = db.DateTimeField(default=datetime.utcnow)
+class Product(Document):
+    name = StringField(required=True, max_length=200)
+    category = StringField(required=True, max_length=100)
+    current_stock = FloatField(default=0)
+    minimum_stock = FloatField(default=0)
+    sale_price = FloatField(required=True)
+    purchase_price = FloatField(default=0)
+    demo_price = FloatField(default=0)
+    description = StringField(default='')
+    image_url = StringField(max_length=500, default='')
+    is_active = BooleanField(default=True)
+    created_at = DateTimeField(default=datetime.utcnow)
+
+    meta = {'collection': 'product'}
 
     def to_dict(self):
         return {
@@ -68,10 +69,10 @@ class Product(db.Document):
             'in_stock': self.current_stock > 0
         }
 
-class User(db.Document):
-    email = db.StringField(required=True, unique=True, max_length=120)
-    password = db.StringField(required=True, max_length=200)
-    name = db.StringField(required=True, max_length=100)
+class User(Document):
+    email = StringField(required=True, unique=True, max_length=120)
+    password = StringField(required=True, max_length=200)
+    name = StringField(required=True, max_length=100)
     phone = db.StringField(max_length=20, default='')
     address = db.StringField(default='')
     is_admin = db.BooleanField(default=False)
